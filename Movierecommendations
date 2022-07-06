@@ -1,0 +1,111 @@
+import shutil
+from tempfile import NamedTemporaryFile
+import pandas as pd
+import collections
+import csv
+
+ageDict = {}
+#Task 4
+def getMoviesByAge(age,numberOfMovies):
+    recommendedMovies = [];
+    flag = False
+    ratings = {}
+    if age in ageDict:
+        ratings = ageDict.get(age)
+        flag = True
+    else:
+        sortedAgeDict = collections.OrderedDict(sorted(ageDict.items()))
+        sortedAgeKeys = sortedAgeDict.keys()
+        #print(sortedAgeKeys)
+        overrideAge = age;
+
+        for ageInDict in sortedAgeKeys:
+            if age > ageInDict:
+                overrideAge = ageInDict
+                flag = True
+        if flag:
+            print("There are no movies matching your age " + str(age) + " please checkout a closer match for age "+str(overrideAge))
+            #getMoviesByAge(overrideAge, numberOfMovies)
+            ratings = ageDict.get(overrideAge)
+        else:
+            print ("Sorry there are no movies matching your age "+str(age))
+
+        #get the rating dictionaries for a given age
+
+    if flag:
+        orderedDict = collections.OrderedDict(sorted(ratings.items(),reverse=True))
+        #print(orderedDict)
+        counter = 1;
+        for eachKey in orderedDict:
+            moviesList = orderedDict.get(eachKey)
+            for movie in moviesList:
+                if counter <= numberOfMovies:
+                    #print(movie)
+                    recommendedMovies.append(movie)
+                    #print(counter)
+                    counter = counter + 1
+                    #print(recommendedMovies)
+        return recommendedMovies
+
+#read csv
+df = pd.read_csv('C:/Users/Owner/OneDrive/Desktop/RatingsInput.csv')
+#Split existing movie name to separate out Movie id and name
+df[['MovieID','MovieName']] = df['MovieName'].str.split(',', expand=True)
+#Replace movie name with updated movie name in Title case
+df['MovieName'] = df['MovieName'].str.title()
+#Write to New File
+df.to_csv('C:/Users/Owner/OneDrive/Desktop/Ratingsnew.csv', index=False)
+
+#Task 3
+
+#open the file
+with open('C:/Users/Owner/OneDrive/Desktop/Ratingsnew.csv', 'r') as file:
+     #passing file object to DictReader()
+     csv_dict_reader = csv.DictReader(file)
+
+     #iterating over each row
+     for row in csv_dict_reader:
+         #print the values
+         #print(row)
+         userAge = int(row.get("UserAge"))
+         rating = int(row.get("Rating"))
+         movieName = row.get("MovieName")
+         #print(userAge)
+         ratingDict = {}
+         if userAge in ageDict:
+             ratingDict = ageDict.get(userAge)
+         movieList = []
+         if rating in ratingDict:
+             movieList = ratingDict.get(rating)
+         movieList.append(movieName)
+         ratingDict[rating] = movieList
+         ageDict[userAge] = ratingDict
+         #print(ageDict)
+
+#getMoviesByAge(29, 4)
+
+#Task 5
+#Name a new file
+filename = "C:/Users/Owner/OneDrive/Desktop/NewUsers.csv"
+tempfile = NamedTemporaryFile('w+t', newline='', delete=False)
+
+# Write to New File
+csv_columns = ["ï»¿UserName", "UserAge", "NoOfMoviesToRecommend", "Movies"]
+with open(filename, 'r') as csvfile, tempfile:
+    newcsv_dict_reader = csv.DictReader(csvfile)
+    writer = csv.DictWriter(tempfile, fieldnames=csv_columns)
+    writer.writeheader()
+    for eachRow in newcsv_dict_reader:
+        #print(eachRow)
+        userAge = int(eachRow.get("UserAge"))
+        noOfMovies = int(eachRow.get("NoOfMoviesToRecommend"))
+        recommendedMovies = getMoviesByAge(userAge, noOfMovies)
+
+        movieNames = ""
+        if recommendedMovies is not None:
+            movieNames = ",".join(recommendedMovies)
+            eachRow["Movies"] = movieNames
+        else:
+            eachRow["Movies"] = "Not Available"
+        writer.writerow(eachRow)
+shutil.move(tempfile.name, filename)
